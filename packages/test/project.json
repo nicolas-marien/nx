@@ -1,0 +1,9 @@
+{
+  "schema": "../../node_modules/nx/schemas/project-schema.json",
+  "targets": {
+    "echo": {
+      "command": "nx watch --projects {projectName} -- echo \\$NX_PROJECT_NAME \\$NX_FILE_CHANGES",
+      "continuous": true
+    }
+  }
+}
