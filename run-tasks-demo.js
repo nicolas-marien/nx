@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+process.env.NX_SKIP_NATIVE_FILE_CACHE = 'true';
 
 const {
   runCommandForTasks,
