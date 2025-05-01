@@ -191,13 +191,11 @@ mod tests {
 mod tests_windows {
     use super::*;
     use std::time::Duration;
-    use tempfile::NamedTempFile;
-    use tokio::net::windows::named_pipe::{ClientOptions, ServerOptions};
+    use tokio::net::windows::named_pipe::ServerOptions;
     use tokio::task;
 
     #[tokio::test]
     async fn test_ipc_transport_connection() {
-        let temp_file = NamedTempFile::new().unwrap();
         let pipe_name = format!(r"\\.\pipe\test-{}", uuid::Uuid::new_v4());
 
         // Create a mock server

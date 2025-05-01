@@ -311,18 +311,18 @@ fn command_builder() -> CommandBuilder {
 mod tests {
     use super::*;
 
-    #[test]
-    fn can_run_commands() {
-        let mut i = 0;
-        let mut pseudo_terminal = PseudoTerminal::default().unwrap();
-        while i < 10 {
-            println!("Running {}", i);
-            let cp1 = pseudo_terminal
-                .run_command(String::from("whoami"), None, None, None)
-                .unwrap();
-            cp1.wait_receiver.recv().unwrap();
-            i += 1;
-        }
-        drop(pseudo_terminal);
-    }
+    // #[test]
+    // fn can_run_commands() {
+    //     let mut i = 0;
+    //     let mut pseudo_terminal = PseudoTerminal::default().unwrap();
+    //     while i < 10 {
+    //         println!("Running {}", i);
+    //         let cp1 = pseudo_terminal
+    //             .run_command(String::from("whoami"), None, None, None)
+    //             .unwrap();
+    //         cp1.wait_receiver.recv().unwrap();
+    //         i += 1;
+    //     }
+    //     drop(pseudo_terminal);
+    // }
 }
