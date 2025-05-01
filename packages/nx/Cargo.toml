@@ -18,6 +18,7 @@ tokio = { version = "1.44.0", features = [
     "io-util",
     "rt",
     "time",
+    "net",
 ] }
 anyhow = "1.0.71"
 better-panic = "0.3.0"
@@ -109,3 +110,4 @@ insta = "1.42.2"
 # This is only used for unit tests
 swc_ecma_dep_graph = "0.109.1"
 tempfile = "3.13.0"
+uuid = { version = "1.0", features = ["v4"] }
