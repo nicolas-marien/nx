@@ -89,7 +89,7 @@ async function main() {
       skipSync: false,
       verbose: false,
       configuration: undefined,
-      targets: ['echo'],
+      targets: ['watch'],
       parallel: undefined,
     };
 

@@ -12,6 +12,13 @@ opt-level = "z"
 strip = "none"
 
 [dependencies]
+tokio = { version = "1.44.0", features = [
+    "sync",
+    "macros",
+    "io-util",
+    "rt",
+    "time",
+] }
 anyhow = "1.0.71"
 better-panic = "0.3.0"
 colored = "2"
@@ -50,13 +57,22 @@ tar = "0.4.44"
 thiserror = "1.0.40"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
-tokio = { version = "1.32.0", features = ['sync','macros','io-util','rt','time'] }
 tokio-util = "0.7.9"
 tracing-appender = "0.2"
 tui-term = "0.2.0"
 walkdir = '2.3.3'
 xxhash-rust = { version = '0.8.5', features = ['xxh3', 'xxh64'] }
 vt100-ctt = { git = "https://github.com/JamesHenry/vt100-rust", rev = "1de895505fe9f697aadac585e4075b8fb45c880d" }
+serde = "1.0.219"
+serde_json = "1.0.140"
+jsonrpsee = { version = "0.25.1", features = [
+    "client-core",
+    "async-client",
+    "macros",
+    "http-client",
+] }
+interprocess = { version = "2.2.3", features = ["tokio"] }
+sha2 = "0.10.8"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["fileapi"] }
@@ -71,7 +87,9 @@ portable-pty = { git = "https://github.com/cammisuli/wezterm", rev = "b538ee29e1
 ignore-files = "2.1.0"
 fs4 = "0.12.0"
 ratatui = { version = "0.29", features = ["scrolling-regions"] }
-reqwest = {  version = "0.12.15", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.12.15", default-features = false, features = [
+    "rustls-tls",
+] }
 rusqlite = { version = "0.32.1", features = ["bundled", "array", "vtab"] }
 watchexec = "3.0.1"
 watchexec-events = "2.0.1"

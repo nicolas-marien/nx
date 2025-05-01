@@ -13,7 +13,7 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::native::tui::action::Action;
 
-use crate::native::tui::utils::is_in_vscode;
+use crate::native::tui::vscode;
 
 use super::{Component, Frame};
 
@@ -151,9 +151,15 @@ impl HelpPopup {
             ("<ctrl>+z", "Stop interacting with a continuous task"),
         ];
 
-        if is_in_vscode() {
+        if vscode::is_vscode_terminal() {
             // add Copilot specific keybindings for AI assistance
-            keybindings.extend([("", ""), ("a", "Allow Copilot to assist with this task")]);
+            keybindings.extend([
+                ("", ""),
+                (
+                    "a",
+                    "Send this output to Copilot so that it can assist with any issues",
+                ),
+            ]);
         }
 
         let mut content: Vec<Line> = vec![

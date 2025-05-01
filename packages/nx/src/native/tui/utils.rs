@@ -96,10 +96,6 @@ pub fn sort_task_items(tasks: &mut [TaskItem], highlighted_names: &HashSet<Strin
     });
 }
 
-pub fn is_in_vscode() -> bool {
-    std::env::var("TERM_PROGRAM").is_ok_and(|v| v == "vscode")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
