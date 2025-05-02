@@ -196,7 +196,8 @@ async function getTerminalOutputLifeCycle(
         pinnedTasks,
         nxArgs ?? {},
         nxJson.tui ?? {},
-        titleText
+        titleText,
+        workspaceRoot
       );
       lifeCycles.unshift(appLifeCycle);
 

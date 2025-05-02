@@ -6,4 +6,4 @@ pub mod lifecycle;
 pub mod pty;
 pub mod tui;
 pub mod utils;
-pub mod vscode;
+pub mod nx_console;

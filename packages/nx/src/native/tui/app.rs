@@ -22,7 +22,6 @@ use crate::native::{
     tasks::types::{Task, TaskResult},
 };
 
-use super::action::Action;
 use super::components::countdown_popup::CountdownPopup;
 use super::components::help_popup::HelpPopup;
 use super::components::layout_manager::{
@@ -37,6 +36,7 @@ use super::lifecycle::RunMode;
 use super::pty::PtyInstance;
 use super::tui;
 use super::utils::normalize_newlines;
+use super::{action::Action, nx_console::messaging::NxConsoleMessageConnection};
 
 pub struct App {
     pub components: Vec<Box<dyn Component>>,
@@ -65,6 +65,7 @@ pub struct App {
     selection_manager: Arc<Mutex<TaskSelectionManager>>,
     pinned_tasks: Vec<String>,
     tasks: Vec<Task>,
+    console_messenger: Option<NxConsoleMessageConnection>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -130,6 +131,7 @@ impl App {
             pty_instances: HashMap::new(),
             selection_manager,
             tasks,
+            console_messenger: None,
         })
     }
 
@@ -876,6 +878,7 @@ impl App {
                                     task.continuous,
                                     is_focused,
                                     has_pty,
+                                    self.console_messenger.is_some(),
                                 );
 
                                 let terminal_pane = TerminalPane::new()
@@ -901,6 +904,11 @@ impl App {
                     let _ = countdown_popup.draw(f, frame_area);
                 })
                 .ok();
+            }
+            Action::SendConsoleMessage(msg) => {
+                if let Some(connection) = self.console_messenger.as_ref() {
+                    connection.send_terminal_string(msg.clone());
+                }
             }
             _ => {}
         }
@@ -952,10 +960,11 @@ impl App {
 
     /// Dispatches an action to the action tx for other components to handle however they see fit
     fn dispatch_action(&self, action: Action) {
-        let tx = self.action_tx.clone().unwrap();
-        tokio::spawn(async move {
-            let _ = tx.send(action);
-        });
+        if let Some(tx) = &self.action_tx {
+            tx.send(action).unwrap_or_else(|e| {
+                debug!("Failed to dispatch action: {}", e);
+            });
+        }
     }
 
     fn recalculate_layout_areas(&mut self) {
@@ -1249,7 +1258,10 @@ impl App {
     fn handle_key_event(&mut self, key: KeyEvent) -> io::Result<()> {
         if let Focus::MultipleOutput(pane_idx) = self.focus {
             let terminal_pane_data = &mut self.terminal_pane_data[pane_idx];
-            terminal_pane_data.handle_key_event(key)
+            if let Some(action) = terminal_pane_data.handle_key_event(key)? {
+                self.dispatch_action(action);
+            }
+            Ok(())
         } else {
             Ok(())
         }
@@ -1287,7 +1299,7 @@ impl App {
 
     /// Actually processes the resize event by updating PTY dimensions.
     fn handle_pty_resize(&mut self) -> io::Result<()> {
-        if !self.layout_areas.is_some() {
+        if self.layout_areas.is_none() {
             return Ok(());
         }
 
@@ -1381,5 +1393,12 @@ impl App {
         self.previous_focus = self.focus;
         self.focus = focus;
         self.dispatch_action(Action::UpdateFocus(focus));
+    }
+
+    pub fn set_console_messenger(&mut self, messenger: Option<NxConsoleMessageConnection>) {
+        self.console_messenger = messenger;
+        if self.console_messenger.is_some() {
+            self.dispatch_action(Action::ConsoleMessagesAvailable(true));
+        }
     }
 }

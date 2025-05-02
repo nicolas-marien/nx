@@ -13,10 +13,11 @@ use tokio::sync::mpsc::UnboundedSender;
 
 use crate::native::tui::action::Action;
 
-use crate::native::tui::vscode;
+use crate::native::tui::nx_console;
 
 use super::{Component, Frame};
 
+#[derive(Default)]
 pub struct HelpPopup {
     scroll_offset: usize,
     scrollbar_state: ScrollbarState,
@@ -24,6 +25,7 @@ pub struct HelpPopup {
     viewport_height: usize,
     visible: bool,
     action_tx: Option<UnboundedSender<Action>>,
+    console_available: bool,
 }
 
 impl HelpPopup {
@@ -35,11 +37,16 @@ impl HelpPopup {
             viewport_height: 0,
             visible: false,
             action_tx: None,
+            console_available: false,
         }
     }
 
     pub fn set_visible(&mut self, visible: bool) {
         self.visible = visible;
+    }
+
+    pub fn set_console_available(&mut self, available: bool) {
+        self.console_available = available;
     }
 
     // Ensure the scroll state is reset to avoid recalc issues
@@ -151,7 +158,7 @@ impl HelpPopup {
             ("<ctrl>+z", "Stop interacting with a continuous task"),
         ];
 
-        if vscode::is_vscode_terminal() {
+        if self.console_available {
             // add Copilot specific keybindings for AI assistance
             keybindings.extend([
                 ("", ""),
@@ -362,6 +369,7 @@ impl Clone for HelpPopup {
             viewport_height: self.viewport_height,
             visible: self.visible,
             action_tx: self.action_tx.clone(),
+            console_available: self.console_available,
         }
     }
 }
@@ -383,6 +391,9 @@ impl Component for HelpPopup {
         match action {
             Action::Resize(w, h) => {
                 self.handle_resize(w, h);
+            }
+            Action::ConsoleMessagesAvailable(available) => {
+                self.set_console_available(available);
             }
             _ => {}
         }

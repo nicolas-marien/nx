@@ -34,4 +34,6 @@ pub enum Action {
     StartCommand(Option<u32>),
     StartTasks(Vec<Task>),
     EndTasks(Vec<TaskResult>),
+    SendConsoleMessage(String),
+    ConsoleMessagesAvailable(bool),
 }

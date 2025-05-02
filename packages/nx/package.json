@@ -1,6 +1,6 @@
 {
   "name": "nx",
-  "version": "21.0.0-beta.8",
+  "version": "21.0.0-beta.12",
   "private": false,
   "description": "The core Nx plugin contains the core functionality of Nx like the project graph, nx commands and task orchestration.",
   "repository": {
