@@ -908,6 +908,8 @@ impl App {
             Action::SendConsoleMessage(msg) => {
                 if let Some(connection) = self.console_messenger.as_ref() {
                     connection.send_terminal_string(msg.clone());
+                } else {
+                    trace!("No console connection available");
                 }
             }
             _ => {}

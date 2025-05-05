@@ -18,7 +18,6 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 pub struct IpcError(#[from] anyhow::Error);
 
 pub struct IpcTransport {
-    _stream: Arc<Stream>,
     pub reader: IpcTransportReceiver,
     pub writer: IpcTransportSender,
 }
@@ -29,11 +28,7 @@ impl IpcTransport {
         let stream = Arc::new(conn);
         let writer = IpcTransportSender(Arc::clone(&stream));
         let reader = IpcTransportReceiver(Arc::clone(&stream));
-        Ok(Self {
-            _stream: stream,
-            reader,
-            writer,
-        })
+        Ok(Self { reader, writer })
     }
 }
 

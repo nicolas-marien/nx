@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::OnceLock;
 
 mod ipc_transport;
@@ -12,62 +13,67 @@ pub enum SupportedEditor {
     Unknown,
 }
 
-static SUPPORTED_EDITORS: &[(&str, SupportedEditor)] = &[
-    ("vscode", SupportedEditor::VSCode),
-    ("cursor", SupportedEditor::Cursor),
-    ("windsurf", SupportedEditor::Windsurf),
-    ("jetbrains", SupportedEditor::JetBrains),
-];
-
 static CURRENT_EDITOR: OnceLock<SupportedEditor> = OnceLock::new();
 
-pub fn get_editor() -> &'static SupportedEditor {
-    CURRENT_EDITOR.get_or_init(detect_editor)
+pub fn get_current_editor() -> &'static SupportedEditor {
+    CURRENT_EDITOR.get_or_init(|| detect_editor(HashMap::new()))
 }
 
-fn detect_editor() -> SupportedEditor {
-    let term_editor = if let Ok(term) = std::env::var("TERM_PROGRAM") {
+fn detect_editor(mut env_map: HashMap<String, String>) -> SupportedEditor {
+    let term_editor = if let Some(term) = get_env_var("TERM_PROGRAM", &mut env_map) {
         let term_lower = term.to_lowercase();
-        SUPPORTED_EDITORS
-            .iter()
-            .find(|&&(name, _)| term_lower == name)
-            .map(|(_, editor)| editor.clone())
+        match term_lower.as_str() {
+            "vscode" => SupportedEditor::VSCode,
+            "cursor" => SupportedEditor::Cursor,
+            "windsurf" => SupportedEditor::Windsurf,
+            "jetbrains" => SupportedEditor::JetBrains,
+            _ => SupportedEditor::Unknown,
+        }
     } else {
-        None
-    };
-
-    // If TERM_PROGRAM is not found or is not recognized, return Unknown
-    let Some(term_ed) = term_editor else {
-        return SupportedEditor::Unknown;
+        SupportedEditor::Unknown
     };
 
     // For JetBrains, we don't need any additional checks
-    if matches!(term_ed, SupportedEditor::JetBrains) {
-        return term_ed;
+    if matches!(term_editor, SupportedEditor::JetBrains) {
+        return term_editor;
     }
 
-    if matches!(term_ed, SupportedEditor::VSCode) {
-        if let Ok(askpass_node) = std::env::var("VSCODE_GIT_ASKPASS_NODE") {
-            let askpass_lower = askpass_node.to_lowercase();
-
-            if askpass_lower.contains("cursor") {
+    if matches!(term_editor, SupportedEditor::VSCode) {
+        if let Some(vscode_git_var) = get_env_var("VSCODE_GIT_ASKPASS_NODE", &mut env_map) {
+            let vscode_git_var_lowercase = vscode_git_var.to_lowercase();
+            if vscode_git_var_lowercase.contains("cursor") {
                 return SupportedEditor::Cursor;
-            } else if askpass_lower.contains("windsurf") {
+            } else if vscode_git_var_lowercase.contains("windsurf") {
                 return SupportedEditor::Windsurf;
             } else {
                 return SupportedEditor::VSCode;
             }
         } else {
-            return term_ed;
+            return term_editor;
         }
     }
 
     SupportedEditor::Unknown
 }
 
+fn get_env_var<'a>(name: &str, env_map: &'a mut HashMap<String, String>) -> Option<&'a str> {
+    if env_map.contains_key(name) {
+        return env_map.get(name).map(|s| s.as_str());
+    }
+
+    match std::env::var(name) {
+        Ok(val) => {
+            env_map.insert(name.to_string(), val);
+            env_map.get(name).map(|s| s.as_str())
+        }
+        Err(_) => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     use std::env;
 
     fn setup() {
@@ -79,109 +85,136 @@ mod tests {
     #[test]
     fn test_detect_vscode() {
         setup();
-        env::set_var("TERM_PROGRAM", "vscode");
-        env::set_var("VSCODE_GIT_ASKPASS_NODE", "some/path/with/vscode/in/it");
-        assert_eq!(detect_editor(), SupportedEditor::VSCode);
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "vscode".to_string());
+        test_env.insert(
+            "VSCODE_GIT_ASKPASS_NODE".to_string(),
+            "some/path/with/vscode/in/it".to_string(),
+        );
+        assert_eq!(detect_editor(test_env), SupportedEditor::VSCode);
     }
 
     #[test]
     fn test_detect_cursor() {
         setup();
-        env::set_var("TERM_PROGRAM", "vscode");
-        env::set_var("VSCODE_GIT_ASKPASS_NODE", "some/path/with/cursor/in/it");
-        assert_eq!(detect_editor(), SupportedEditor::Cursor);
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "vscode".to_string());
+        test_env.insert(
+            "VSCODE_GIT_ASKPASS_NODE".to_string(),
+            "some/path/with/cursor/in/it".to_string(),
+        );
+        assert_eq!(detect_editor(test_env), SupportedEditor::Cursor);
     }
 
     #[test]
     fn test_detect_windsurf() {
         setup();
-        env::set_var("TERM_PROGRAM", "vscode");
-        env::set_var("VSCODE_GIT_ASKPASS_NODE", "some/path/with/windsurf/in/it");
-        assert_eq!(detect_editor(), SupportedEditor::Windsurf);
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "vscode".to_string());
+        test_env.insert(
+            "VSCODE_GIT_ASKPASS_NODE".to_string(),
+            "some/path/with/windsurf/in/it".to_string(),
+        );
+        assert_eq!(detect_editor(test_env), SupportedEditor::Windsurf);
     }
 
     #[test]
     fn test_detect_jetbrains() {
         setup();
-        env::set_var("TERM_PROGRAM", "jetbrains");
-        assert_eq!(detect_editor(), SupportedEditor::JetBrains);
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "jetbrains".to_string());
+        assert_eq!(detect_editor(test_env), SupportedEditor::JetBrains);
     }
 
     #[test]
     fn test_term_program_missing() {
         setup();
-        assert_eq!(detect_editor(), SupportedEditor::Unknown);
+        assert_eq!(detect_editor(HashMap::new()), SupportedEditor::Unknown);
     }
 
     #[test]
     fn test_term_program_unknown() {
         setup();
-        env::set_var("TERM_PROGRAM", "some-unknown-editor");
-        assert_eq!(detect_editor(), SupportedEditor::Unknown);
+        let mut test_env = HashMap::new();
+        test_env.insert(
+            "TERM_PROGRAM".to_string(),
+            "some-unknown-editor".to_string(),
+        );
+        assert_eq!(detect_editor(test_env), SupportedEditor::Unknown);
     }
 
     #[test]
     fn test_vscode_without_askpass_confirmation() {
         setup();
-        env::set_var("TERM_PROGRAM", "vscode");
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "vscode".to_string());
         // No VSCODE_GIT_ASKPASS_NODE set or doesn't contain "vscode"
-        assert_eq!(detect_editor(), SupportedEditor::VSCode);
+        assert_eq!(detect_editor(test_env), SupportedEditor::VSCode);
     }
 
     #[test]
     fn test_vscode_with_wrong_askpass() {
         setup();
-        env::set_var("TERM_PROGRAM", "vscode");
-        env::set_var(
-            "VSCODE_GIT_ASKPASS_NODE",
-            "some/path/with/no/matching/editor",
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "vscode".to_string());
+        test_env.insert(
+            "VSCODE_GIT_ASKPASS_NODE".to_string(),
+            "some/path/with/no/matching/editor".to_string(),
         );
-        assert_eq!(detect_editor(), SupportedEditor::VSCode);
+        assert_eq!(detect_editor(test_env), SupportedEditor::VSCode);
     }
 
     #[test]
     fn test_case_insensitivity() {
         setup();
-        env::set_var("TERM_PROGRAM", "VSCode");
-        env::set_var("VSCODE_GIT_ASKPASS_NODE", "some/path/with/VSCODE/in/it");
-        assert_eq!(detect_editor(), SupportedEditor::VSCode);
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "VSCode".to_string());
+        test_env.insert(
+            "VSCODE_GIT_ASKPASS_NODE".to_string(),
+            "some/path/with/VSCODE/in/it".to_string(),
+        );
+        assert_eq!(detect_editor(test_env), SupportedEditor::VSCode);
     }
 
     #[test]
     fn test_cursor_without_askpass_confirmation() {
         setup();
-        env::set_var("TERM_PROGRAM", "cursor");
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "cursor".to_string());
         // No VSCODE_GIT_ASKPASS_NODE set
-        assert_eq!(detect_editor(), SupportedEditor::Unknown);
+        assert_eq!(detect_editor(test_env), SupportedEditor::Unknown);
     }
 
     #[test]
     fn test_cursor_with_wrong_askpass() {
         setup();
-        env::set_var("TERM_PROGRAM", "cursor");
-        env::set_var(
-            "VSCODE_GIT_ASKPASS_NODE",
-            "some/path/with/no/matching/editor",
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "cursor".to_string());
+        test_env.insert(
+            "VSCODE_GIT_ASKPASS_NODE".to_string(),
+            "some/path/with/no/matching/editor".to_string(),
         );
-        assert_eq!(detect_editor(), SupportedEditor::Unknown);
+        assert_eq!(detect_editor(test_env), SupportedEditor::Unknown);
     }
 
     #[test]
     fn test_windsurf_without_askpass_confirmation() {
         setup();
-        env::set_var("TERM_PROGRAM", "windsurf");
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "windsurf".to_string());
         // No VSCODE_GIT_ASKPASS_NODE set
-        assert_eq!(detect_editor(), SupportedEditor::Unknown);
+        assert_eq!(detect_editor(test_env), SupportedEditor::Unknown);
     }
 
     #[test]
     fn test_windsurf_with_wrong_askpass() {
         setup();
-        env::set_var("TERM_PROGRAM", "windsurf");
-        env::set_var(
-            "VSCODE_GIT_ASKPASS_NODE",
-            "some/path/with/no/matching/editor",
+        let mut test_env = HashMap::new();
+        test_env.insert("TERM_PROGRAM".to_string(), "windsurf".to_string());
+        test_env.insert(
+            "VSCODE_GIT_ASKPASS_NODE".to_string(),
+            "some/path/with/no/matching/editor".to_string(),
         );
-        assert_eq!(detect_editor(), SupportedEditor::Unknown);
+        assert_eq!(detect_editor(test_env), SupportedEditor::Unknown);
     }
 }

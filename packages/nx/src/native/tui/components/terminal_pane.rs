@@ -96,7 +96,9 @@ impl TerminalPaneData {
                     self.set_interactive(true);
                     return Ok(None);
                 }
-                KeyCode::Char('a') if !self.is_interactive => {
+                KeyCode::Char('a')
+                    if key.modifiers.contains(KeyModifiers::CONTROL) && !self.is_interactive =>
+                {
                     let Some(screen) = pty.get_screen() else {
                         return Ok(None);
                     };
@@ -496,7 +498,7 @@ impl<'a> StatefulWidget for TerminalPane<'a> {
                                 ];
 
                                 if matches!(
-                                    nx_console::get_editor(),
+                                    nx_console::get_current_editor(),
                                     nx_console::SupportedEditor::VSCode
                                 ) {
                                     ai_info.push(Span::styled(
