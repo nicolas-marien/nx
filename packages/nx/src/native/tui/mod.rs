@@ -3,7 +3,7 @@ pub mod app;
 pub mod components;
 pub mod config;
 pub mod lifecycle;
+pub mod nx_console;
 pub mod pty;
 pub mod tui;
 pub mod utils;
-pub mod nx_console;
