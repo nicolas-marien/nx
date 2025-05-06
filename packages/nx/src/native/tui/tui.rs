@@ -16,6 +16,7 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 use tracing::debug;
+use crate::native::tui::theme::THEME;
 
 pub type Frame<'a> = ratatui::Frame<'a>;
 
@@ -165,6 +166,8 @@ impl Tui {
     }
 
     pub fn enter(&mut self) -> Result<()> {
+        // Ensure the theme is set before entering raw mode because it won't work properly once we're in raw mode
+        let _ = THEME.is_dark_mode;
         debug!("Enabling Raw Mode");
         crossterm::terminal::enable_raw_mode()?;
         crossterm::execute!(std::io::stderr(), EnterAlternateScreen, cursor::Hide)?;
